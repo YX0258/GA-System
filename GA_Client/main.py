@@ -51,5 +51,5 @@ if __name__ == "__main__":
     #print(sock)
     client_select(sock)
     while True:
-        print("主线程")
+        print("主线程正在运行...")
         sleep(.2)
