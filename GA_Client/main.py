@@ -1,12 +1,21 @@
+import sys
 import socket
 import threading
+from readconfig import read_config 
+from json import loads,dumps
+from process import read_proc_info
+from logger import log_init
 from select import select
 from time import sleep,time
 from ConnectServer import connect_server
-
+import asyncore
+'''
 #SERVER_HOST = "192.168.0.147"
 SERVER_HOST = "192.168.0.199"
 SERVER_POST = 8080
+'''
+config = {}
+count = 0
 
 ##################################################################
 def client_select(sock):
@@ -19,22 +28,33 @@ def client_select(sock):
                 sock_lock.acquire()     # 申请线程锁
                 if not sock:
                     sock_lock.release() 
-                #data = srecv(1024)     # 读取数据
                 data = sock.recv(1024)
                 sock_lock.release()
 
                 print("获取的数据：", data)
     
+    def send_data(data):
+        serialized_data = dumps(data)       # 序列化数据，转换成JSON格式
+        sock.sendall(bytes(serialized_data,"utf-8"))
+
+    def send_tasks():
+        timing = float(config["send_interval"])
+        t = threading.Timer(timing,read_proc_info_task)
+        t.start()
+
+    def read_proc_info_task():
+        global count
+        print(read_proc_info())
+        send_data(read_proc_info())     # 发送进程数据
+        send_data(count)
+        count += 1
+        send_tasks()                     # 定期发送
+
     read_thread = threading.Thread(target=read_thread)
     read_thread.setDaemon(True)     #守护线程
     read_thread.start()
+    send_tasks()
 
-        # 测试不断写数据
-    for x in range(10):
-        print (x)
-        sock.sendall(bytes("hello", "utf-8"))
-        sleep(.1)  # 交出CPU时间，否则其他线程只能看着
-        
 '''
     # 清理socket，同样道理，这里需要锁定和解锁
     sock_lock.acquire()
@@ -42,21 +62,18 @@ def client_select(sock):
     sock = None
     sock_lock.release()
 '''
-##################################################################
-def Regular_tasks(time):
-    print("定期任务")
-    threading.Timer(5,Regular_tasks,(time,)).start()
-
 
 ##################################################################
 
 # The script starts here
 if __name__ == "__main__":
-    sock = connect_server(SERVER_HOST, SERVER_POST, 5)
+    log_init()
+    config = read_config()
+    sock = connect_server(config["host"], int(config["port"]), 5)
     
-    #print(sock)
+    print(sock)
     client_select(sock)
-    Regular_tasks(4)
+    #Regular_tasks()
     while True:
         print("主线程正在运行...")
-        sleep(2)
+        sleep(20)
