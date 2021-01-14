@@ -1,7 +1,7 @@
 import socket
 import threading
 from select import select
-from time import sleep
+from time import sleep,time
 from ConnectServer import connect_server
 
 #SERVER_HOST = "192.168.0.147"
@@ -34,6 +34,7 @@ def client_select(sock):
         print (x)
         sock.sendall(bytes("hello", "utf-8"))
         sleep(.1)  # 交出CPU时间，否则其他线程只能看着
+        
 '''
     # 清理socket，同样道理，这里需要锁定和解锁
     sock_lock.acquire()
@@ -42,7 +43,12 @@ def client_select(sock):
     sock_lock.release()
 '''
 ##################################################################
+def Regular_tasks(time):
+    print("定期任务")
+    threading.Timer(5,Regular_tasks,(time,)).start()
 
+
+##################################################################
 
 # The script starts here
 if __name__ == "__main__":
@@ -50,6 +56,7 @@ if __name__ == "__main__":
     
     #print(sock)
     client_select(sock)
+    Regular_tasks(4)
     while True:
         print("主线程正在运行...")
-        sleep(.2)
+        sleep(2)
