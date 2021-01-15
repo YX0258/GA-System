@@ -2,3 +2,15 @@
 2021-01-14 17:20:23,477 WARNING: psutil.NoSuchProcess no process found with pid 1592
 2021-01-14 17:23:59,495 WARNING: psutil.NoSuchProcess no process found with pid 10316
 2021-01-14 17:24:03,094 WARNING: psutil.NoSuchProcess no process found with pid 9008
+2021-01-15 09:43:36,385 WARNING: psutil.NoSuchProcess no process found with pid 7028
+2021-01-15 09:53:21,458 WARNING: psutil.NoSuchProcess no process found with pid 3196
+2021-01-15 09:53:26,951 WARNING: psutil.NoSuchProcess no process found with pid 3684
+2021-01-15 11:27:54,245 WARNING: psutil.NoSuchProcess no process found with pid 1196
+2021-01-15 11:50:32,863 ERROR: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+2021-01-15 11:51:07,890 ERROR: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+2021-01-15 11:54:42,932 ERROR: [WinError 10053] 你的主机中的软件中止了一个已建立的连接。
+2021-01-15 13:33:57,307 WARNING: psutil.NoSuchProcess no process found with pid 716
+2021-01-15 15:06:57,258 WARNING: psutil.NoSuchProcess no process found with pid 3016
+2021-01-15 15:08:07,615 WARNING: psutil.NoSuchProcess no process found with pid 8208
+2021-01-15 15:22:07,141 WARNING: psutil.NoSuchProcess no process found with pid 432
+2021-01-15 17:17:01,709 WARNING: psutil.NoSuchProcess no process found with pid 804
