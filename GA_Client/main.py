@@ -4,22 +4,20 @@ import logger
 import threading
 from readconfig import read_config 
 from json import loads,dumps
-from process import read_proc_info
+from process import read_proc_info,find_proc
 from select import select
 from time import sleep,time
 from ConnectServer import connect_server
-'''
-#SERVER_HOST = "192.168.0.147"
-SERVER_HOST = "192.168.0.199"
-SERVER_POST = 8080
-'''
+from Device_manager import check_device
+
 config = {}
 count = 0
+data_packet = {}
 
 ##################################################################
 def client_select(config):
-    server_ip    = config["host"]
-    server_port  = int(config["port"])
+    server_ip    = config["ServerParam"]["host"]
+    server_port  = int(config["ServerParam"]["port"])
     reconn_count = 5
 
     sock = connect_server(server_ip, server_port, reconn_count)
@@ -30,7 +28,7 @@ def client_select(config):
 
     # 读取服务器发来的数据
     def read_thread():
-        nonlocal sock
+        nonlocal sock               # 外函数的变量
         time_out = 10               # select() 超时时间 
         while True:
             readable, _, _ = select(event_list, [], [], time_out)
@@ -40,6 +38,8 @@ def client_select(config):
                     if not sock:
                         sock_lock.release() 
                     data = sock.recv(1024)
+                    if data is "b''":
+                        print("服务器已断开，正在重连...")
                     sock_lock.release()
 
                     print("获取的数据：", data)
@@ -52,23 +52,27 @@ def client_select(config):
         nonlocal sock
         serialized_data = dumps(data)       # 序列化数据，转换成JSON格式
         try:
+            print("数据长度：", len(serialized_data))
             sock.sendall(bytes(serialized_data,"utf-8"))
-        except ConnectionAbortedError as err:
-            print("服务器主动断开了连接:", err)
-            logger.logging.error(err)
+        except socket.error:
+            print("服务器主动断开了连接:", socket.error)
+            logger.logging.error(socket.error)
             sock = connect_server(server_ip, server_port, reconn_count)
     
+    proc_list = find_proc(config["Process"])    # 进程列表
+
     # 定时发送数据
     def send_tasks():
-        timing = float(config["send_interval"])
+        timing = float(config["ServerParam"]["send_interval"])
         t = threading.Timer(timing,read_proc_info_task)
+        #s = threading.Event()
         t.setDaemon(True)
         t.start()
 
     # 读取进程信息
     def read_proc_info_task():
         global count
-        Proc_Info = read_proc_info()
+        Proc_Info = read_proc_info(proc_list)
         print(Proc_Info)
         send_data(Proc_Info)     # 发送进程数据
         send_data(count)
@@ -81,7 +85,7 @@ def client_select(config):
     send_tasks()
 
 '''
-    # 清理socket，同样道理，这里需要锁定和解锁
+    # 关闭socket，锁定和解锁
     sock_lock.acquire()
     sock.close()
     sock = None
@@ -91,12 +95,20 @@ def client_select(config):
 ##################################################################
 
 # The script starts here
-if __name__ == "__main__":
+if __name__ == "__main__":    
     logger.log_init()
 
-    config = read_config()
+    config = read_config()  
+    '''
+    server_config = config["ServerParam"]
+    process_config = config["Process"]
+    '''
+    # client_select(server_config)
+
     client_select(config)
 
     while True:
-        print("主线程正在运行...")
-        sleep(20)
+        disconn_dev = check_device(config["Device"], 0)
+        print("主线程正在运行，检测设备是否接入...")
+        print("未连接设备：", disconn_dev)
+        sleep(3)

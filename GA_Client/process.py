@@ -1,21 +1,7 @@
 from os import startfile
 import psutil
 import logger
-
-proc_dict = {
-    "name"        :"wps.exe",
-    #"name"        : "notepad.exe",  #进程名称
-    "pid"         : None,           #进程PID
-    "cpu_percent" : 0,              #进程CPU使用率 %
-    "mem_percent" : 0,              #进程内存使用率 %
-    "cup_used"    : 0,              #已使用的总cpu %
-    "mem_used"    : 0.00,              #已使用的总内存 %
-    "cpu_limit"   : 50,             #进程最大CPU限制
-    "mem_limit"   : 50,             #进程最大内存限制
-    "proc_cwd"    : "",
-    "path"        :"H:/Yuxin/py_project/GA-System/GA_Client/word路径测试.doc"  #文件路径
-}
-
+'''
 #获取CPU占比
 def get_cpu_percent():
     return psutil.cpu_percent(interval=None)   #检测间隔
@@ -43,39 +29,77 @@ def get_proc_info(proc_pid):
     if proc_pid == None:    #初次运行
         proc_dict["pid"] = process_open(proc_dict["path"])  #自动打开文件
         proc_pid = get_pid_by_name(proc_dict["name"])
+'''
+#######################################################################################
+def get_pid_fname(name, path):
+    temp_list = []
+    for proc in psutil.process_iter():                  # 查找目标进程
+        if proc.name() == name:
+            cwd = proc.cmdline()[len(proc.cmdline())-1] # 获取命令行
+            if cwd.find(path) == 0:                     # 从命令行里找路径
+                proc_dict = {
+                    "name"  : name,
+                    "pid"   : proc.pid,                 # 获取PID
+                    "fname" : cwd.lstrip(path)          # 从命令行截取文件名
+                }
+                temp_list.append(proc_dict)             # 添加进列表
+                
+    return temp_list
+
+# 从设备管理器寻找配置文件里的进程，每个进程创建一个dict，存进列表并返回
+def find_proc(config_proc):
+    proc_list = []
+    proc_name = ""
+    proc_path = ""
     
-    while True:     
-        try:
-            proc = psutil.Process(proc_pid)
-            proc_dict["pid"]         = proc_pid
-            proc_dict["name"]        = proc.name()
-            
-            proc_dict["mem_percent"] = proc.memory_percent()
-            proc_dict["cpu_percent"] = proc.cpu_percent(interval=None) 
-            proc_dict["cup_used"]    = get_cpu_percent()
-            proc_dict["mem_used"]    = get_mem_percent()
+    for p in config_proc:
+        if proc_name == "":
+            proc_name = config_proc[p]
+        else:
+            proc_path = config_proc[p]
+            temp_list = get_pid_fname(proc_name, proc_path)
+            if temp_list == []:   # 进程没运行
+                print("没有找到进程“%s”,请检查是否已经运行" % proc_name)
+            else:
+                proc_list.extend(temp_list)
+            proc_name = ""
+    return proc_list
 
-            #获取绝对路径，并把反双斜杠转换成单斜杠
-            path = proc.cwd()           
-            proc_dict["proc_cwd"]    = eval(repr(path).replace('\\\\', '/'))
-            #proc_dict["other"] = proc.cmdline()    #命令行
-            '''
-            print("pid         = ", proc_dict["pid"])
-            print("name        = ", proc_dict["name"])
-            print("mem_percent = ", proc_dict["mem_percent"])
-            print("cpu_percent = ", proc_dict["cpu_percent"])
-            '''
-            break
-        except psutil.NoSuchProcess as errmsg:  #读取过程中异常关闭
-            print(errmsg)
-            proc_dict["pid"] = process_open(proc_dict["path"])  #重新打开进程
-            proc_pid = proc_dict["pid"]
-            ###############
-            #输出值错误日志
-            logger.logging.warning(errmsg)
-            ###############
+def get_other_info(proc_pid):
+    try:
+        proc = psutil.Process(proc_pid)
+        mem_percent = proc.memory_percent()             # 进程内存占用
+        cpu_percent = proc.cpu_percent(interval=None)   # 进程CPU占用
+        proc_status = proc.status()
+        
+    except psutil.NoSuchProcess as errmsg:  #读取过程中异常关闭
+        print(errmsg)
+        #proc_dict["pid"] = process_open(proc_dict["path"])  #重新打开进程
+        #proc_pid = proc_dict["pid"]
+        #logger.logging.warning(errmsg)
+        return 0
+    else:
+        add_info = {
+            "mem_percent" : round(mem_percent, 2),
+            "cpu_percent" : round(cpu_percent, 2),
+            "proc_status" : proc_status
+        }
+        return add_info
 
-def read_proc_info():
-    get_proc_info(proc_dict["pid"])     #获取进程信息
-    return proc_dict.copy()             #返回副本信息
+# 根据进程列表，获取进程的其他信息
+def read_proc_info(proc_list):
+    for p in proc_list:
+        temp_info = get_other_info(p["pid"])
+        if temp_info == 0:
+            proc_list.remove(p)     # 从列表中移除     
+        else:
+            p.update(temp_info)     # 根据PID获取其他信息
+    return proc_list                # 返回新的信息列表
 
+########
+'''
+调用方法：
+proc_list = find_proc(process_config)   # 通过配置文件获得需要监测的进程列表
+proc_dict = read_proc_info(proc_list)   # 读取详细进程信息，返回列表，元素为每个进程的信息字典
+'''
+########
